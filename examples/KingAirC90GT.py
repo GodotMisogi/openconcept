@@ -5,11 +5,12 @@ import numpy as np
 
 sys.path.insert(0, os.getcwd())
 from openmdao.api import Problem, Group, ScipyOptimizeDriver
-from openmdao.api import DirectSolver, SqliteRecorder, IndepVarComp
+from openmdao.api import DirectSolver, SqliteRecorder, IndepVarComp, ExecComp
 from openmdao.api import NewtonSolver, BoundsEnforceLS
+import openmdao.api as om
 
 # imports for the airplane model itself
-from openconcept.analysis.aerodynamics import PolarDrag
+from openconcept.analysis.aerodynamics import PolarDrag, HullResistance
 from openconcept.utilities.math import AddSubtractComp
 from openconcept.utilities.math.integrals import Integrator
 from examples.methods.weights_turboprop import SingleTurboPropEmptyWeight
@@ -55,8 +56,11 @@ class KingAirC90GTModel(Group):
             cd0_source = 'ac|aero|polar|CD0_TO'
         self.add_subsystem('drag', PolarDrag(num_nodes=nn),
                            promotes_inputs=['fltcond|CL', 'ac|geom|*', ('CD0', cd0_source),
-                                            'fltcond|q', ('e', 'ac|aero|polar|e')],
-                           promotes_outputs=['drag'])
+                                            'fltcond|q', ('e', 'ac|aero|polar|e')], promotes_outputs=['drag'])
+
+        # self.add_subsystem('res', HullResistance(), promotes=['*'])
+        # self.add_subsystem('total', ExecComp('drag = resistance + air_drag', drag={'units': 'N'}, resistance={'units': 'N'}, air_drag={'units': 'N'}), promotes=['*'])
+        # self.connect('drag.drag', 'air_drag')
 
         # generally the weights module will be custom to each airplane
         self.add_subsystem('OEW', SingleTurboPropEmptyWeight(),
@@ -149,6 +153,7 @@ if __name__ == "__main__":
     prob.model.nonlinear_solver.options['rtol'] = 1e-6
     prob.model.nonlinear_solver.linesearch = BoundsEnforceLS(bound_enforcement='scalar', print_bound_enforce=True)
     prob.setup(check=True, mode='fwd')
+    om.n2(prob, 'KingAirC90GT.html', show_browser=False)
 
     # set some (required) mission parameters. Each pahse needs a vertical and air-speed
     # the entire mission needs a cruise altitude and range

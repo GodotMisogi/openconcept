@@ -1,0 +1,177 @@
+INFO: checking out_of_order
+INFO: checking system
+INFO: checking solvers
+INFO: checking dup_inputs
+INFO: checking missing_recorders
+WARNING: The Problem has no recorder of any kind attached
+INFO: checking comp_has_no_outputs
+--------------------------------------------------------
+Component: AerodynamicPitching 'trim.center_of_pressure'
+--------------------------------------------------------
+'<output>' wrt '<variable>'     | fwd mag.   | check mag. | a(fwd-chk) | r(fwd-chk)
+-----------------------------------------------------------------------------------
+
+'ac|cm'    wrt 'ac|cl'          | 0.0000e+00 | 0.0000e+00 | 0.0000e+00 | nan
+'ac|cm'    wrt 'fuselage|cm'    | 1.0000e+00 | 1.0000e+00 | 4.6566e-10 | 4.6566e-10
+'ac|cm'    wrt 'hstab|S_ref'    | 1.9326e-01 | 1.9326e-01 | 1.9583e-11 | 1.0133e-10
+'ac|cm'    wrt 'hstab|cl'       | 1.5615e+00 | 1.5615e+00 | 9.2153e-12 | 5.9014e-12
+'ac|cm'    wrt 'hstab|cm'       | 1.0000e+00 | 1.0000e+00 | 0.0000e+00 | 0.0000e+00
+'ac|cm'    wrt 'hstab|coords|x' | 1.0410e-01 | 1.0410e-01 | 4.9609e-10 | 4.7654e-09
+'ac|cm'    wrt 'ref_chord'      | 7.8865e-01 | 7.8865e-01 | 3.9791e-07 | 5.0454e-07
+'ac|cm'    wrt 'wing|S_ref'     | 3.9835e-02 | 3.9835e-02 | 1.1592e-09 | 2.9099e-08
+'ac|cm'    wrt 'wing|cm'        | 1.0000e+00 | 1.0000e+00 | 0.0000e+00 | 0.0000e+00
+'ac|cm'    wrt 'wing|coords|x'  | 8.7178e-01 | 8.7178e-01 | 2.7972e-10 | 3.2086e-10
+'x_cp'     wrt 'ac|cl'          | 1.3339e+00 | 1.3339e+00 | 8.7782e-07 | 6.5806e-07
+'x_cp'     wrt 'fuselage|cm'    | 1.3026e+00 | 1.3026e+00 | 5.0855e-10 | 3.9040e-10
+'x_cp'     wrt 'hstab|S_ref'    | 2.5175e-01 | 2.5175e-01 | 3.0536e-10 | 1.2130e-09
+'x_cp'     wrt 'hstab|cl'       | 2.0341e+00 | 2.0341e+00 | 7.3776e-11 | 3.6269e-11
+'x_cp'     wrt 'hstab|cm'       | 1.3026e+00 | 1.3026e+00 | 4.2890e-11 | 3.2926e-11
+'x_cp'     wrt 'hstab|coords|x' | 1.3561e-01 | 1.3561e-01 | 5.4819e-10 | 4.0425e-09
+'x_cp'     wrt 'ref_chord'      | 3.2895e-03 | 3.2895e-03 | 3.7375e-10 | 1.1362e-07
+'x_cp'     wrt 'wing|S_ref'     | 5.1890e-02 | 5.1890e-02 | 1.1791e-09 | 2.2723e-08
+'x_cp'     wrt 'wing|cm'        | 1.3026e+00 | 1.3026e+00 | 4.2890e-11 | 3.2926e-11
+'x_cp'     wrt 'wing|coords|x'  | 1.1356e+00 | 1.1356e+00 | 4.3177e-10 | 3.8021e-10
+---------------------------------------------------------------------
+Component: ElementMultiplyDivideComp 'trim.center_of_gravity.moments'
+---------------------------------------------------------------------
+'<output>' wrt '<variable>' | fwd mag.   | check mag. | a(fwd-chk) | r(fwd-chk)
+-------------------------------------------------------------------------------
+
+'xWs'      wrt 'positions'  | 2.2913e+03 | 2.2913e+03 | 1.1921e-07 | 5.2027e-11
+'xWs'      wrt 'weights'    | 2.5006e+01 | 2.5006e+01 | 0.0000e+00 | 0.0000e+00
+-------------------------------------------------------
+Component: SumComp 'trim.center_of_gravity.sum_weights'
+-------------------------------------------------------
+'<output>' wrt '<variable>' | fwd mag.   | check mag. | a(fwd-chk) | r(fwd-chk)
+-------------------------------------------------------------------------------
+
+'W'        wrt 'weights'    | 1.7321e+00 | 1.7321e+00 | 4.7684e-07 | 2.7530e-07
+-------------------------------------------------------
+Component: SumComp 'trim.center_of_gravity.sum_moments'
+-------------------------------------------------------
+'<output>' wrt '<variable>' | fwd mag.   | check mag. | a(fwd-chk) | r(fwd-chk)
+-------------------------------------------------------------------------------
+
+'xW'       wrt 'xWs'        | 1.7321e+00 | 1.7321e+00 | 4.0327e-10 | 2.3283e-10
+--------------------------------------------------------------
+Component: ExecComp 'trim.center_of_gravity.center_of_gravity'
+--------------------------------------------------------------
+'<output>' wrt '<variable>' | fwd mag.   | check mag. | a(fwd-chk) | r(fwd-chk)
+-------------------------------------------------------------------------------
+
+'x_cg'     wrt 'W'          | 1.0000e+00 | 1.0000e+00 | 1.0001e-06 | 1.0001e-06 >ABS_TOL >REL_TOL
+'x_cg'     wrt 'xW'         | 1.0000e+00 | 1.0000e+00 | 8.2267e-11 | 8.2267e-11
+-----------------------------------
+Component: BalanceComp 'trim.solve'
+-----------------------------------
+'<output>' wrt '<variable>'   | fwd mag.   | check mag. | a(fwd-chk) | r(fwd-chk)
+---------------------------------------------------------------------------------
+
+'hstab|cl' wrt 'hstab|cl'     | 0.0000e+00 | 0.0000e+00 | 0.0000e+00 | nan
+'hstab|cl' wrt 'lhs:hstab|cl' | 8.0000e-01 | 8.0000e-01 | 6.5813e-11 | 8.2267e-11
+'hstab|cl' wrt 'rhs:hstab|cl' | 8.0000e-01 | 8.0000e-01 | 3.2007e-07 | 4.0008e-07
+
+#############################################################################################
+Sub Jacobian with Largest Relative Error: ExecComp 'trim.center_of_gravity.center_of_gravity'
+#############################################################################################
+'<output>' wrt '<variable>'   | fwd mag.   | check mag. | a(fwd-chk) | r(fwd-chk)
+---------------------------------------------------------------------------------
+'x_cg'     wrt 'W'          | 1.0000e+00 | 1.0000e+00 | 1.0001e-06 | 1.0001e-06
+18 Input(s) in 'model'
+----------------------
+
+varname                  value                 prom_name     
+-----------------------  --------------------  --------------
+model
+  trim
+    center_of_pressure
+      ac|cl              [1.52]                ac|cl         
+      wing|S_ref         [39.2]                wing|S_ref    
+      wing|coords|x      [0.]                  wing|coords|x 
+      wing|cm            [0.001]               wing|cm       
+      ref_chord          [1.98]                ref_chord     
+      hstab|coords|x     [15.]                 hstab|coords|x
+      hstab|cl           [-1.]                 hstab|cl      
+      hstab|cm           [0.003]               hstab|cm      
+      hstab|S_ref        [8.08]                hstab|S_ref   
+      fuselage|cm        [0.001]               fuselage|cm   
+    center_of_gravity
+      moments
+        weights          |2291.28784747792|    weights       
+        positions        |25.00624921894525|   positions     
+      sum_weights
+        weights          |2291.28784747792|    weights       
+      sum_moments
+        xWs              |1.7320508075688772|  xWs           
+      center_of_gravity
+        W                [1.]                  W             
+        xW               [1.]                  xW            
+    solve
+      lhs:hstab|cl       [1.]                  lhs:hstab|cl  
+      rhs:hstab|cl       [1.]                  rhs:hstab|cl  
+
+
+18 Explicit Output(s) in 'model'
+--------------------------------
+
+varname                        value                 prom_name                
+-----------------------------  --------------------  -------------------------
+model
+  dv_comp
+    ac|aero|cl                 [1.52]                ac|aero|cl               
+    ac|geom|ref_chord          [1.98]                ac|geom|ref_chord        
+    ac|geom|wing|S_ref         [39.2]                ac|geom|wing|S_ref       
+    ac|geom|wing|cm            [0.001]               ac|geom|wing|cm          
+    ac|geom|wing|coords|x      [0.]                  ac|geom|wing|coords|x    
+    ac|geom|hstab|S_ref        [8.08]                ac|geom|hstab|S_ref      
+    ac|geom|hstab|cm           [0.003]               ac|geom|hstab|cm         
+    ac|geom|hstab|coords|x     [15.]                 ac|geom|hstab|coords|x   
+    ac|geom|fuselage|cm        [0.001]               ac|geom|fuselage|cm      
+    ac|geom|fuselage|coords|x  [-0.5]                ac|geom|fuselage|coords|x
+  indeps
+    weights                    |2291.28784747792|    weights                  
+    positions                  |25.00624921894525|   positions                
+  trim
+    center_of_pressure
+      ac|cm                    [1.]                  trim.ac|cm               
+      x_cp                     [1.]                  trim.x_cp                
+    center_of_gravity
+      moments
+        xWs                    |1.7320508075688772|  trim.xWs                 
+      sum_weights
+        W                      [1.]                  trim.W                   
+      sum_moments
+        xW                     [1.]                  trim.xW                  
+      center_of_gravity
+        x_cg                   [1.]                  trim.x_cg                
+
+
+1 Implicit Output(s) in 'model'
+-------------------------------
+
+varname         value  prom_name    
+--------------  -----  -------------
+model
+  trim
+    solve
+      hstab|cl  [-1.]  trim.hstab|cl
+
+
+[-1.]
+[8.08]
+INFO: checking out_of_order
+INFO: checking system
+INFO: checking solvers
+INFO: checking dup_inputs
+INFO: checking missing_recorders
+WARNING: The Problem has no recorder of any kind attached
+INFO: checking comp_has_no_outputs
+NL: Newton 0 ; 0.867100531 1
+NL: Newton 1 ; 0.274984653 0.317131225
+NL: Newton 2 ; 0.0487858432 0.0562631914
+NL: Newton 3 ; 0.00216847658 0.00250083641
+NL: Newton 4 ; 4.68198512e-06 5.39958742e-06
+NL: Newton 5 ; 2.19207294e-11 2.52804935e-11
+NL: Newton Converged
+[-1.86432409]
+[8.08]

@@ -1,8 +1,98 @@
 """Aerodynamic analysis routines usable for multiple purposes / flight phases"""
 from __future__ import division
-from openmdao.api import ExplicitComponent
+from openmdao.api import ExplicitComponent, MetaModelUnStructuredComp, Group, KrigingSurrogate
 import numpy as np
 
+def hullModel(hull_datapath):
+    # Surrogate input format: [C_vr, C_r]
+    # , [C_vt, Trim] 
+    # cvr, cr, cvt, trim = [], [], [], []
+    training = []
+    with open(hull_datapath) as resistance:
+        for row in resistance:
+            row = row.split(',')
+            if (row[0] != '') or (row[1] != '') or (row[2] != '') or (row[3] != ''):
+                # cvr.append(float(row[0]))
+                # cr.append(float(row[1]))
+                # cvt.append(float(row[2]))
+                # trim.append(float(row[3]))
+                training.append(list(map(float, row)))
+                
+    # training = np.transpose([cvr, cvt, cr, trim])
+
+    return training
+
+hull_datapath = '/home/godot/Academia/Amphy/Aircraft Data/TN2481 - Planing Hull.csv'
+
+hull_data = hullModel(hull_datapath)
+# print(hull_data)
+
+class HullSurrogate(MetaModelUnStructuredComp):
+
+    def initialize(self):
+        self.options.declare('default_surrogate', default=KrigingSurrogate())
+        self.options.declare('vec_size', default=1)
+        self.options.declare('dataset', default=np.zeros((4,1)))
+        self.options.declare('train:CVR')
+        self.options.declare('train:CVT')
+        self.options.declare('train:CR')
+        self.options.declare('train:alphat')
+
+    def setup(self):
+        dataset = self.options['dataset']
+        self.add_input('CVR', 0., training_data=[ x[0] for x in dataset ])
+        self.add_input('CVT', 0., training_data=[ x[2] for x in dataset ])
+        self.add_output('CR', 0., training_data=[ x[1] for x in dataset ])
+        self.add_output('alphat', 0., training_data=[ x[3] for x in dataset ])
+
+class VelocityCoefficient(ExplicitComponent):
+
+    def setup(self):
+        self.add_input('fltcond|Utrue', val=0., units='m')
+        self.add_input('B', val=0., units='m')
+
+        self.add_output('CVR')
+        self.add_output('CVT')
+
+        self.declare_partials('*', '*')
+    def compute(self, inputs, outputs):
+        g = 9.81
+        outputs['CVR'] = inputs['fltcond|Utrue']/(g * inputs['B'])**0.5
+        outputs['CVT'] = inputs['fltcond|Utrue']/(g * inputs['B'])**0.5
+
+    def compute_partials(self, inputs, partials):
+        g = 9.81
+        partials['CVR', 'fltcond|Utrue'] = 1./(g * inputs['B'])**0.5
+        partials['CVR', 'B'] = - 0.5 * g * inputs['fltcond|Utrue']/(g * inputs['B'])**1.5
+        partials['CVT', 'fltcond|Utrue'] = 1./(g * inputs['B'])**0.5
+        partials['CVT', 'B'] = - 0.5 * g * inputs['fltcond|Utrue']/(g * inputs['B'])**1.5
+
+class Resistance(ExplicitComponent):
+
+    def setup(self):
+        self.add_input('CR', val=0)
+        self.add_input('B', units='m')
+
+        self.add_output('resistance', units='N')
+
+        self.declare_partials('*', '*')
+    def compute(self, inputs, outputs):
+        g = 9.81
+        rho_w = 998.2
+        outputs['resistance'] = rho_w * g * inputs['B']**3 * inputs['CR']
+
+    def compute_partials(self, inputs, partials):
+        g = 9.81
+        rho_w = 998.2
+        partials['resistance', 'B'] = 3 * rho_w * g * inputs['B']**2 * inputs['CR'] 
+        partials['resistance', 'CR'] = rho_w * g * inputs['B']**3 
+
+class HullResistance(Group):
+
+    def setup(self):
+        self.add_subsystem('vel_coeff', VelocityCoefficient(), promotes=['*'])
+        self.add_subsystem('surrogate', HullSurrogate(dataset=hull_data), promotes=['*'])
+        self.add_subsystem('res', Resistance(), promotes=['*'])
 
 class PolarDrag(ExplicitComponent):
     """
