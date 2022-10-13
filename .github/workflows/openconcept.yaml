@@ -4,15 +4,24 @@ on:
   pull_request:
   push:
     branches:
-      - master
+      - main
+    tags:
+      - v*.*.*
 
 jobs:
+  black:
+    uses: mdolab/.github/.github/workflows/black.yaml@main
+  flake8:
+    uses: mdolab/.github/.github/workflows/flake8.yaml@main
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ["ubuntu-latest", "windows-latest"]
+        os: ["ubuntu-latest", "windows-latest", "macos-latest"]
+        python-version: ["3.8", "3.9", "3.10"]
       fail-fast: false
+    env:
+      OMP_NUM_THREADS: 1
     defaults:
       run:
         shell: bash -l {0}
@@ -22,36 +31,40 @@ jobs:
       uses: conda-incubator/setup-miniconda@v2
       with:
         auto-update-conda: true
-        python-version: 3.6
+        python-version: ${{ matrix.python-version }}
     - name: Setup conda
       run: |
         conda config --set always_yes yes
         conda install numpy scipy
     - name: Install
       run: |
-        pip install coverage pytest-cov sphinx_rtd_theme
         pip install .[testing]
-    - if: ${{ matrix.os == 'ubuntu-latest' }}
-      name: Download engine deck surrogate model data Ubuntu
+        pip install .[docs]
+    - name: List Python and package info
       run: |
-        wget http://umich.edu/~mdolaboratory/repo_files/openconcept/engine_kriging_surrogate_model.tar.gz
-    - if: ${{ matrix.os == 'windows-latest' }}
-      name: Download engine deck surrogate model data Windows
+        python --version
+        pip list
+    - name: Download engine deck surrogate model
       run: |
         curl -L -o engine_kriging_surrogate_model.tar.gz http://umich.edu/~mdolaboratory/repo_files/openconcept/engine_kriging_surrogate_model.tar.gz
     - name: Move engine deck files to appropriate location
       run: |
         tar -xvf engine_kriging_surrogate_model.tar.gz
-        mv cfm56* ./openconcept/components/empirical_data/cfm56
-        mv n3_hybrid* ./openconcept/components/empirical_data/n+3_hybrid
-        mv n3* ./openconcept/components/empirical_data/n+3
+        mv cfm56* ./openconcept/propulsion/empirical_data/cfm56
+        mv n3_hybrid* ./openconcept/propulsion/empirical_data/n+3_hybrid
+        mv n3* ./openconcept/propulsion/empirical_data/n+3
     - name: Build and Test
       run: |
-        python -m pytest --cov-config .coveragerc --cov=openconcept
-    - name: Push to Coveralls
+        python -m pytest --cov-config=.coveragerc --cov=openconcept --cov-report=xml
+    - name: Upload coverage to Codecov
       if: ${{ matrix.os == 'ubuntu-latest' }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        pip install coveralls
-        coveralls --service=github --rcfile=.coveragerc
+      uses: codecov/codecov-action@v2
+      with:
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+  
+  # --- publish to PyPI
+  pypi:
+    needs: [build]
+    uses: mdolab/.github/.github/workflows/pypi.yaml@main
+    secrets: inherit
