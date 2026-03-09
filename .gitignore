@@ -1,3 +1,4 @@
+*.openmdao_out
 *.pyc
 *.env
 *.html
@@ -25,3 +26,5 @@ scratch/
 *.npy
 .DS_Store
 .flake8
+.pre-commit-config.yaml
+ruff.toml

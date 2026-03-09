@@ -4,9 +4,41 @@ from openconcept.utilities import Integrator, AddSubtractComp, ElementMultiplyDi
 
 import warnings
 
+
+def get_prom_name(system, abs_name, iotype):
+    """Get the promoted name of a input or output variable
+
+    Parameters
+    ----------
+    system : OpenMDAO System (e.g Group, component)
+        The system to search
+    abs_name : str
+        Absolute name of the variable
+    iotype : str
+        Variable type, either 'input' or 'output'
+
+    Returns
+    -------
+    str or None
+        Promoted name of the variable, or None if not found
+    """
+    try:
+        if hasattr(system, "_resolver"):
+            return system._resolver._abs2prom[iotype.lower()][abs_name][0]
+        else:
+            return system._var_abs2prom[iotype.lower()][abs_name]
+    except KeyError:
+        return None
+
+
 # OpenConcept PhaseGroup will be used to hold analysis phases with time integration
-def find_integrators_in_model(system, abs_namespace, timevars, states):
-    durationvar = system._problem_meta["oc_time_var"]
+def find_integrators_in_model(system, abs_namespace, timevars, states, durationvar):
+    """
+    Recursively find integration-related variables (time, states, and duration) under this system
+    and put them in imtevars and states lists.
+
+    TODO: user-defined integrators are breaking things, and I suspect it is from here
+    """
 
     # check if we are a group or not
     if isinstance(system, om.Group):
@@ -15,7 +47,7 @@ def find_integrators_in_model(system, abs_namespace, timevars, states):
                 next_namespace = subsys.name
             else:
                 next_namespace = abs_namespace + "." + subsys.name
-            find_integrators_in_model(subsys, next_namespace, timevars, states)
+            find_integrators_in_model(subsys, next_namespace, timevars, states, durationvar)
     else:
         # if the duration variable shows up we need to add its absolute path to timevars
         if isinstance(system, Integrator):
@@ -34,7 +66,6 @@ def find_integrators_in_model(system, abs_namespace, timevars, states):
 
 class PhaseGroup(om.Group):
     def __init__(self, **kwargs):
-        # BB what if user isn't passing num_nodes to the phases?
         num_nodes = kwargs.get("num_nodes", 1)
         super(PhaseGroup, self).__init__(**kwargs)
         self._oc_time_var_name = "duration"
@@ -43,17 +74,11 @@ class PhaseGroup(om.Group):
     def initialize(self):
         self.options.declare("num_nodes", default=1, types=int, lower=0)
 
-    def _setup_procs(self, pathname, comm, mode, prob_meta):
-        # need to pass down the name of the duration variable via prob_meta
-        prob_meta.update({"oc_time_var": self._oc_time_var_name})
-        prob_meta.update({"oc_num_nodes": self._oc_num_nodes})
-        super(PhaseGroup, self)._setup_procs(pathname, comm, mode, prob_meta)
-
     def configure(self):
         # check child subsys for variables to be integrated and add them all
         timevars = []
         states = []
-        find_integrators_in_model(self, "", timevars, states)
+        find_integrators_in_model(self, "", timevars, states, self._oc_time_var_name)
         self._setup_var_data()
 
         # make connections from duration to integrated vars automatically
@@ -61,7 +86,11 @@ class PhaseGroup(om.Group):
         for var_abs_address in timevars:
             if self.pathname:
                 var_abs_address = self.pathname + "." + var_abs_address
-            var_prom_address = self._var_abs2prom["input"][var_abs_address]
+
+            var_prom_address = get_prom_name(self, var_abs_address, "input")
+            if var_abs_address is None:
+                continue
+
             if (
                 var_prom_address != self._oc_time_var_name
                 and var_prom_address not in time_prom_addresses_already_connected
@@ -73,11 +102,13 @@ class PhaseGroup(om.Group):
 
 class IntegratorGroup(om.Group):
     def __init__(self, **kwargs):
-        # BB what if user isn't passing num_nodes to the phases?
         time_units = kwargs.pop("time_units", "s")
         super(IntegratorGroup, self).__init__(**kwargs)
         self._oc_time_units = time_units
         self._n_auto_comps = 0
+
+    def initialize(self):
+        self.options.declare("num_nodes", default=1, types=int, lower=0)
 
     def promote_add(
         self,
@@ -174,25 +205,31 @@ class IntegratorGroup(om.Group):
         self.add_subsystem(mult_name, mult, promotes_outputs=["*"])
         self.connect(source, mult_name + "._temp")
 
-    def _setup_procs(self, pathname, comm, mode, prob_meta):
+    def _setup_procs(self, *args):
+        # We use this hidden method to always add "ode_integ" subsystem to the group that inherets from
+        # this class (e.g. aircraft model). We cannot use `setup` method here because the user will define
+        # `setup` in their user-defined (aircraft model) class that inherits from this class.
+        # (This IntegratorGroup is never added directly to the OM model)
         time_units = self._oc_time_units
-        self._under_dymos = False
-        self._under_openconcept = False
-        try:
-            num_nodes = prob_meta["oc_num_nodes"]
-            self._under_openconcept = True
-        except KeyError:
-            # TODO test_if_under_dymos
-            if not self._under_dymos:
-                raise NameError("Integrator group must be created within an OpenConcept phase or Dymos trajectory")
+        num_nodes = self.options["num_nodes"]
 
-        if self._under_openconcept:
+        # In OM 3.40 and later, static_mode is no longer True when this method is called, which leads to any
+        # subsystems that are added here to later be erased. So here we force static_mode to True while we add the
+        # Integrator subsystem to get around the issue. See https://github.com/OpenMDAO/OpenMDAO/issues/3621 for
+        # more details
+        try:
+            if self._problem_meta is not None:
+                self._problem_meta["static_mode"] = True
             self.add_subsystem(
                 "ode_integ",
                 Integrator(time_setup="duration", method="simpson", diff_units=time_units, num_nodes=num_nodes),
             )
-
-        super(IntegratorGroup, self)._setup_procs(pathname, comm, mode, prob_meta)
+        finally:
+            if self._problem_meta is not None:
+                self._problem_meta["static_mode"] = False
+        # Call om.Group's _setup_procs which does a lot of things as an initial phase of setup.
+        # We pass *args because the signature of this method varies depending on the OM version.
+        super(IntegratorGroup, self)._setup_procs(*args)
 
     def configure(self):
         self._setup_var_data()
@@ -237,7 +274,8 @@ class IntegratorGroup(om.Group):
                             + "."
                             + var
                             + " "
-                            + "has no units specified. This can be dangerous."
+                            + "has no units specified. This can be dangerous.",
+                            stacklevel=2,
                         )
                     self.ode_integ.add_integrand(
                         state_name,
@@ -280,7 +318,6 @@ class TrajectoryGroup(om.Group):
         self._setup_var_data()
         for state_tuple in phase1_states:
             if state_tuple[0] in [state_tuple_2[0] for state_tuple_2 in phase2_states]:
-
                 phase1_abs_name = phase1.name + "." + state_tuple[0]
                 phase1_end_abs_name = phase1.name + "." + state_tuple[2]  # final
                 phase2_start_abs_name = phase2.name + "." + state_tuple[1]  # initial
@@ -289,15 +326,15 @@ class TrajectoryGroup(om.Group):
                     phase1_end_abs_name = self.pathname + "." + phase1_end_abs_name
                     phase2_start_abs_name = self.pathname + "." + phase2_start_abs_name
 
-                phase1_prom_name = self._var_abs2prom["output"][phase1_abs_name]
+                phase1_prom_name = get_prom_name(self, phase1_abs_name, "output")
                 if phase1_prom_name.startswith(phase1.name):  # only modify the text if it starts with the prefix
                     state_prom_name = phase1_prom_name.replace(phase1.name + ".", "", 1)
                 else:
                     state_prom_name = phase1_prom_name
-                phase1_end_prom_name = self._var_abs2prom["output"][phase1_end_abs_name]
-                phase2_start_prom_name = self._var_abs2prom["input"][phase2_start_abs_name]
-                if not (state_tuple[0] in states_to_skip):
-                    if not (state_prom_name in states_to_skip):
+                phase1_end_prom_name = get_prom_name(self, phase1_end_abs_name, "output")
+                phase2_start_prom_name = get_prom_name(self, phase2_start_abs_name, "input")
+                if state_tuple[0] not in states_to_skip:
+                    if state_prom_name not in states_to_skip:
                         self.connect(phase1_end_prom_name, phase2_start_prom_name)
 
     def link_phases(self, phase1, phase2, states_to_skip=[]):

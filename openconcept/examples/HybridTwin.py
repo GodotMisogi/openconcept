@@ -213,8 +213,8 @@ def configure_problem():
     prob.model.linear_solver = DirectSolver(assemble_jac=True)
     prob.model.nonlinear_solver.options["solve_subsystems"] = True
     prob.model.nonlinear_solver.options["maxiter"] = 10
-    prob.model.nonlinear_solver.options["atol"] = 1e-7
-    prob.model.nonlinear_solver.options["rtol"] = 1e-7
+    prob.model.nonlinear_solver.options["atol"] = 1e-10
+    prob.model.nonlinear_solver.options["rtol"] = 1e-10
     return prob
 
 
@@ -322,7 +322,6 @@ def show_outputs(prob):
             phases,
             x_label=x_label,
             y_labels=y_labels,
-            marker="-",
             plot_title="Takeoff Profile",
         )
 

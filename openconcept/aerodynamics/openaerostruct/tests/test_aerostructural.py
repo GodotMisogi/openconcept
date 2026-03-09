@@ -50,8 +50,8 @@ class AerostructDragPolarTestCase(unittest.TestCase):
         # Generate mesh to pass to OpenAeroStruct
         mesh = om.Problem(
             Aerostruct(
-                num_x=3,
-                num_y=7,
+                num_x=2,
+                num_y=6,
                 num_twist=twist.size,
                 num_toverc=toverc.size,
                 num_skin=t_skin.size,
@@ -75,8 +75,8 @@ class AerostructDragPolarTestCase(unittest.TestCase):
         p = om.Problem(
             AerostructDragPolar(
                 num_nodes=1,
-                num_x=3,
-                num_y=7,
+                num_x=2,
+                num_y=6,
                 num_twist=twist.size,
                 num_toverc=toverc.size,
                 num_skin=t_skin.size,
@@ -144,8 +144,8 @@ class AerostructDragPolarTestCase(unittest.TestCase):
         p = om.Problem(
             AerostructDragPolar(
                 num_nodes=nn,
-                num_x=3,
-                num_y=7,
+                num_x=2,
+                num_y=6,
                 num_twist=twist.size,
                 num_toverc=toverc.size,
                 num_skin=t_skin.size,
@@ -176,7 +176,7 @@ class AerostructDragPolarTestCase(unittest.TestCase):
         p.run_model()
 
         # Ensure they're all the same
-        assert_near_equal(p.get_val("drag", units="N"), 33112.3426245 * np.ones(nn), tolerance=1e-10)
+        assert_near_equal(p.get_val("drag", units="N"), 33058.43316461 * np.ones(nn), tolerance=1e-10)
 
     def test_vectorized(self):
         nn = 7
@@ -187,8 +187,8 @@ class AerostructDragPolarTestCase(unittest.TestCase):
         p = om.Problem(
             AerostructDragPolar(
                 num_nodes=nn,
-                num_x=3,
-                num_y=7,
+                num_x=2,
+                num_y=6,
                 num_twist=twist.size,
                 num_toverc=toverc.size,
                 num_skin=t_skin.size,
@@ -218,7 +218,7 @@ class AerostructDragPolarTestCase(unittest.TestCase):
         p.run_model()
 
         # Ensure they're all the same
-        assert_near_equal(p.get_val("drag", units="N"), 35911.23954369 * np.ones(nn), tolerance=1e-10)
+        assert_near_equal(p.get_val("drag", units="N"), 35692.26543182 * np.ones(nn), tolerance=1e-10)
 
 
 @unittest.skipIf(not OAS_installed, "OpenAeroStruct is not installed")
@@ -238,10 +238,12 @@ class OASDataGenTestCase(unittest.TestCase):
         toverc = np.array([0.05, 0.1, 0.12])
         t_skin = np.array([5, 13, 15])  # mm
         t_spar = np.array([5, 13, 15])  # mm
-        p = om.Problem(
+        p = om.Problem()
+        p.model.add_subsystem(
+            "comp",
             OASDataGen(
-                num_x=3,
-                num_y=7,
+                num_x=2,
+                num_y=6,
                 num_twist=twist.size,
                 num_toverc=toverc.size,
                 num_skin=t_skin.size,
@@ -249,7 +251,8 @@ class OASDataGenTestCase(unittest.TestCase):
                 Mach_train=np.linspace(0.1, 0.85, 2),
                 alpha_train=np.linspace(-10, 15, 2),
                 alt_train=np.linspace(0, 15e3, 2),
-            )
+            ),
+            promotes=["*"],
         )
         p.setup()
         p.set_val("fltcond|TempIncrement", 0, units="degC")
@@ -272,7 +275,7 @@ class OASDataGenTestCase(unittest.TestCase):
             ]
         )
         CD = np.array(
-            [[[0.0423459, 0.04473217], [0.07565092, 0.0781007]], [[0.03668226, 0.04308131], [0.11930142, 0.15852171]]]
+            [[[0.04196198, 0.04421198], [0.07526711, 0.07758053]], [[0.03631444, 0.04259311], [0.11894307, 0.158035]]]
         )
 
         assert_near_equal(p.get_val("CL_train"), CL, tolerance=1e-7)
@@ -314,7 +317,7 @@ class OASDataGenTestCase(unittest.TestCase):
 class AerostructTestCase(unittest.TestCase):
     def get_prob(self, surf_dict={}):
         p = om.Problem(
-            Aerostruct(num_x=3, num_y=5, num_twist=2, num_toverc=2, num_skin=2, num_spar=2, surf_options=surf_dict)
+            Aerostruct(num_x=2, num_y=4, num_twist=2, num_toverc=2, num_skin=2, num_spar=2, surf_options=surf_dict)
         )
         p.setup()
         p.set_val("fltcond|alpha", 3.0, units="deg")
@@ -338,7 +341,7 @@ class AerostructTestCase(unittest.TestCase):
 
         # Use values computed offline from an OAS wingbox case with the same inputs
         assert_near_equal(p.get_val("fltcond|CL"), 0.22369546, tolerance=1e-6)
-        assert_near_equal(p.get_val("fltcond|CD"), 0.01664464, tolerance=1e-6)
+        assert_near_equal(p.get_val("fltcond|CD"), 0.015608634462089457, tolerance=1e-6)
         assert_near_equal(p.get_val("failure"), -0.64781499, tolerance=1e-6)
         assert_near_equal(p.get_val("ac|weights|W_wing", units="kg"), 29322.10058108, tolerance=1e-6)
 
@@ -348,7 +351,7 @@ class AerostructTestCase(unittest.TestCase):
 
         # Use values computed offline from an OAS wingbox case with the same inputs
         assert_near_equal(p.get_val("fltcond|CL"), 0.22369546, tolerance=1e-6)
-        assert_near_equal(p.get_val("fltcond|CD"), 0.0164930472, tolerance=1e-6)
+        assert_near_equal(p.get_val("fltcond|CD"), 0.015457034121371742, tolerance=1e-6)
         assert_near_equal(p.get_val("failure"), -0.64781499, tolerance=1e-6)
         assert_near_equal(p.get_val("ac|weights|W_wing", units="kg"), 29322.10058108, tolerance=1e-6)
 
@@ -371,7 +374,7 @@ class AerostructDragPolarExactTestCase(unittest.TestCase):
         q = 0.5 * 0.55427276 * 264.20682682**2
         nn = 3
         p = om.Problem(
-            AerostructDragPolarExact(num_nodes=nn, num_x=3, num_y=5, num_twist=2, num_toverc=2, num_skin=2, num_spar=2)
+            AerostructDragPolarExact(num_nodes=nn, num_x=2, num_y=4, num_twist=2, num_toverc=2, num_skin=2, num_spar=2)
         )
         p.model.nonlinear_solver = om.NewtonSolver(solve_subsystems=True, atol=1e-8, rtol=1e-10)
         p.model.linear_solver = om.DirectSolver()
@@ -397,7 +400,7 @@ class AerostructDragPolarExactTestCase(unittest.TestCase):
         p.run_model()
 
         # Use values computed offline from an OAS wingbox case with the same inputs
-        CD = CD0 + np.array([0.015167035551253, 0.015746642643445, 0.016644647603543])
+        CD = CD0 + np.array([0.014130134503259, 0.014710068221375, 0.015608634461878])
         assert_near_equal(p.get_val("drag"), q * S * CD, tolerance=1e-6)
         assert_near_equal(p.get_val("failure"), np.array([-0.89649433, -0.77578479, -0.64781499]), tolerance=1e-6)
         assert_near_equal(p.get_val("ac|weights|W_wing", units="kg"), 29322.10058108, tolerance=1e-6)

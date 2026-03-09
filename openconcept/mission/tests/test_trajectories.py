@@ -27,6 +27,8 @@ Trajectory
 x. Connections automatically created between many phases
 x. Skip works correctly
 """
+
+
 # ============== Feature Doc ==================== #
 class TestForDocs(unittest.TestCase):
     def test_for_docs(self):
@@ -43,7 +45,7 @@ class TestForDocs(unittest.TestCase):
         import numpy as np
 
         class NewtonSecondLaw(om.ExplicitComponent):
-            "A regular OpenMDAO component computing acceleration from mass and force"
+            """A regular OpenMDAO component computing acceleration from mass and force"""
 
             def initialize(self):
                 self.options.declare("num_nodes", default=1)
@@ -71,7 +73,7 @@ class TestForDocs(unittest.TestCase):
                 outputs["accel"] = inputs["force"] / inputs["mass"]
 
         class DragEquation(om.ExplicitComponent):
-            "Another regular OpenMDAO component that happens to take a state variable as input"
+            """Another regular OpenMDAO component that happens to take a state variable as input"""
 
             def initialize(self):
                 self.options.declare("num_nodes", default=1)
@@ -109,7 +111,7 @@ class TestForDocs(unittest.TestCase):
                 self.connect("drag.force", "nsl.force")
 
         class MyPhase(PhaseGroup):
-            "An OpenConcept Phase comprises part of a time-based TrajectoryGroup and always needs to have a 'duration' defined"
+            """An OpenConcept Phase comprises part of a time-based TrajectoryGroup and always needs to have a 'duration' defined"""
 
             def setup(self):
                 self.add_subsystem(
@@ -118,7 +120,7 @@ class TestForDocs(unittest.TestCase):
                 self.add_subsystem("vm", VehicleModel(time_units="min", num_nodes=self.options["num_nodes"]))
 
         class MyTraj(TrajectoryGroup):
-            "An OpenConcept TrajectoryGroup consists of one or more phases that may be linked together. This will often be a top-level model"
+            """An OpenConcept TrajectoryGroup consists of one or more phases that may be linked together. This will often be a top-level model"""
 
             def setup(self):
                 self.add_subsystem("phase1", MyPhase(num_nodes=11))
@@ -163,6 +165,7 @@ class IntegratorGroupTestBase(IntegratorGroup):
                     "tags": ["integrate", "state_name:f", "state_units:kg"],
                 },
                 x={"val": 1.0 * np.ones((nn,)), "units": "s"},
+                has_diag_partials=True,
             ),
         )
         self.connect("iv.x", "ec.x")
@@ -213,6 +216,7 @@ class IntegratorTestMultipleOutputs(IntegratorGroupTestBase):
                     "tags": ["integrate", "state_name:f2", "state_units:J"],
                 },
                 x={"val": 1.0 * np.ones((nn,)), "units": "s"},
+                has_diag_partials=True,
             ),
         )
         self.connect("iv.x", "ec2.x")
@@ -267,6 +271,7 @@ class IntegratorTestPromotes(IntegratorGroupTestBase):
                     "tags": ["integrate", "state_name:f2", "state_units:J", "state_promotes:True"],
                 },
                 x={"val": 1.0 * np.ones((nn,)), "units": "s"},
+                has_diag_partials=True,
             ),
         )
         self.connect("iv.x", "ec2.x")
@@ -328,6 +333,7 @@ class IntegratorTestValLimits(IntegratorGroupTestBase):
                     ],
                 },
                 x={"val": 1.0 * np.ones((nn,)), "units": "s"},
+                has_diag_partials=True,
             ),
         )
         self.connect("iv.x", "ec2.x")
@@ -376,6 +382,7 @@ class IntegratorTestDuplicateRateNames(IntegratorGroupTestBase):
                 ["df = 5.1*x**3 +0.5*x-7.2"],
                 df={"val": 1.0 * np.ones((nn,)), "units": "W", "tags": ["integrate", "state_name:f2", "state_units:J"]},
                 x={"val": 1.0 * np.ones((nn,)), "units": "s"},
+                has_diag_partials=True,
             ),
         )
         self.connect("iv.x", "ec2.x")
@@ -411,6 +418,7 @@ class IntegratorTestDuplicateStateNames(IntegratorGroupTestBase):
                 ["df2 = 5.1*x**3 +0.5*x-7.2"],
                 df2={"val": 1.0 * np.ones((nn,)), "units": "W", "tags": ["integrate", "state_name:f", "state_units:J"]},
                 x={"val": 1.0 * np.ones((nn,)), "units": "s"},
+                has_diag_partials=True,
             ),
         )
         self.connect("iv.x", "ec2.x")
@@ -435,20 +443,6 @@ class TestIntegratorDuplicateStateName(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             self.p.setup(force_alloc_complex=True)
         self.assertIn("Variable name 'f_final' already exists.", "{}".format(cm.exception))
-
-
-class TestIntegratorOutsideofPhase(unittest.TestCase):
-    def setUp(self):
-        self.nn = 5
-        self.p = om.Problem(model=IntegratorGroupTestBase(num_nodes=self.nn))
-
-    def test_asserts(self):
-        with self.assertRaises(NameError) as cm:
-            self.p.setup(force_alloc_complex=True)
-        self.assertEqual(
-            "{}".format(cm.exception),
-            "Integrator group must be created within an OpenConcept phase or Dymos trajectory",
-        )
 
 
 class TestIntegratorNoIntegratedState(unittest.TestCase):
@@ -519,6 +513,7 @@ class IntegratorGroupTestPromotedRate(IntegratorGroup):
                     "tags": ["integrate", "state_name:f", "state_units:kg"],
                 },
                 x={"val": 1.0 * np.ones((nn,)), "units": "s"},
+                has_diag_partials=True,
             ),
             promotes_outputs=["df"],
         )
@@ -569,8 +564,22 @@ class TestPhaseNoTime(unittest.TestCase):
         self.p = om.Problem(model=phase)
 
     def test_raises_error(self):
-        with self.assertRaises(NameError):
+        # Check if OM raises an error for invalid connections of non-existent `duration` variable
+
+        # Exception type changed from NameError to RuntimeError in OpenMDAO 3.22.0
+        import openmdao
+
+        om_version = openmdao.__version__
+        version_split = om_version.split(".")
+        minor = int(version_split[1])
+        if minor >= 22:
+            exc = RuntimeError  # OM >=3.22
+        else:
+            exc = NameError  # OM < 3.22
+
+        with self.assertRaises(exc):
             self.p.setup()
+            self.p.final_setup()
 
 
 class TestPhaseMultipleIntegrators(unittest.TestCase):

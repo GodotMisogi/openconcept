@@ -24,15 +24,15 @@ This is a basic climb-cruise-descent mission for a fixed-wing aircraft.
 
 For this mission, users should specify the following variables in the run script:
 
-- takeoff altitude ``takeoff|h0``, default is 0 ft.
+- takeoff and landing altitude ``takeoff|h``. If a ground roll is included, that altitude needs to be set separately via the ground roll's ``fltcond|h`` variable. This parameter should not be used with the ``FullMissionAnalysis`` or ``FullMissionWithReserve`` because it does not properly set takeoff altitudes as you may expect.
 - cruise altitude ``cruise|h0``.
 - mission range ``mission_range``.
 - payload weight ``payload``.
 - vertical speed ``<climb, cruise, descent>.fltcond|vs`` for each phase.
 - airspeed ``<climb, cruise, descent>.fltcond|Ueas`` for each phase.
 - (optional) ``takeoff|v2`` if you include a ground roll phase before climb. The ground roll phase is not included by default.
-  
-The duration of each phase is automatically set given the cruise altitude and mission range.  
+
+The duration of each phase is automatically set given the cruise altitude and mission range.
 
 Full mission including takeoff: ``FullMissionAnalysis``
 -------------------------------------------------------
@@ -42,7 +42,7 @@ The additional takeoff phases are:
 - ``v0v1``: from a standstill to decision speed (v1). An instance of ``GroundRollPhase``.
 - ``v1vr``: from v1 to rotation. An instance of ``GroundRollPhase``.
 - ``rotate``: rotation in the air before steady climb. An instance of ``RotationPhase`` or ``RobustRotationPhase``.
-- ``v1vr``: energency stopping from v1 to a stop. An instance of ``GroundRollPhase``.
+- ``v1v0``: energency stopping from v1 to a stop. An instance of ``GroundRollPhase``.
 
 We use ``BLIImplicitSolve`` to solve for the decision speed ``v1`` where the one-engine-out takeoff distance is equal to the braking distance for rejected takeoff.
 
@@ -64,6 +64,11 @@ Additional variables you need to set in the run script are
 - vertical speed and airspeed for additional phases: ``<reserve_climb, reserve_cruise, reserve_descent, loiter>.<fltcond|Ueas, fltcond|vs>``
 - reserve range ``reserve_range`` and altitude ``reserve|h0``.
 - loiter duration ``loiter_duration`` and loiter altitude ``loiter|h0``.
+
+Full mission with reserve: ``FullMissionWithReserve``
+--------------------------------------------
+This mission combines ``FullMissionAnalysis`` and ``MissionWithReserve``, so it includes takeoff phases, climb, cruise, descent, and a reserve mission.
+Refer to the documentation for ``FullMissionAnalysis`` and ``MissionWithReserve`` to determine which parameters must be set.
 
 Phase types
 ===========
