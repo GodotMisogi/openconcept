@@ -91,7 +91,12 @@ class HeatPipe(Group):
         # Used ExecComp here because multiplying vector and scalar inputs
         self.add_subsystem(
             "heat_divide",
-            ExecComp("q_div = q / n_pipes", q_div={"units": "W", "shape": (nn,)}, q={"units": "W", "shape": (nn,)}),
+            ExecComp(
+                "q_div = q / n_pipes",
+                q_div={"units": "W", "shape": (nn,)},
+                q={"units": "W", "shape": (nn,)},
+                has_diag_partials=True,
+            ),
             promotes_inputs=["q", "n_pipes"],
         )
 
@@ -123,6 +128,7 @@ class HeatPipe(Group):
                 "q_max = single_pipe_q_max * n_pipes",
                 q_max={"units": "W", "shape": (nn,)},
                 single_pipe_q_max={"units": "W", "shape": (nn,)},
+                has_diag_partials=True,
             ),
             promotes_inputs=["n_pipes"],
             promotes_outputs=["q_max"],
@@ -171,6 +177,7 @@ class HeatPipe(Group):
                 T_evap={"units": "degC", "shape": (nn,)},
                 q={"units": "W", "shape": (nn,)},
                 R={"units": "K/W", "shape": (nn,)},
+                has_diag_partials=True,
             ),
             promotes_inputs=["T_evap"],
             promotes_outputs=["T_cond"],
@@ -316,6 +323,7 @@ class HeatPipeVaporTempDrop(ExplicitComponent):
     -------
     num_nodes : int
         Number of analysis points to run, default 1 (scalar, dimensionless)
+
     Other options shouldn't be adjusted since they're for ammonia and there is a
     hardcoded curve fit also for ammonia in the compute method
     """
@@ -830,7 +838,7 @@ class QMaxWarning(ExplicitComponent):
         if np.any(q > q_warn * q_max):
             warnings.warn(
                 self.msginfo + f" Heat pipe is being asked to transfer "
-                f"{np.max(q/q_max)*100:2.1f}% of its maximum heat transfer capability. This is {(np.max(q/q_max) - q_warn)*100:2.1f}% over "
-                f"the warning threshold of {q_warn*100:2.1f}%.",
+                f"{np.max(q / q_max) * 100:2.1f}% of its maximum heat transfer capability. This is {(np.max(q / q_max) - q_warn) * 100:2.1f}% over "
+                f"the warning threshold of {q_warn * 100:2.1f}%.",
                 stacklevel=2,
             )

@@ -8,7 +8,7 @@ __version__ = re.findall(
 )[0]
 
 this_directory = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(this_directory, "readme.md"), encoding="utf-8") as f:
+with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
@@ -37,14 +37,21 @@ setup(
     download_url="https://github.com/mdolab/openconcept",
     license="MIT License",
     packages=find_packages(include=["openconcept*"]),
+    package_data={
+        # engine deck data
+        "openconcept.propulsion.empirical_data": ["**/*.npy"],
+    },
+    include_package_data=True,
     install_requires=[
-        "scipy>=1.0.0",
-        "numpy>=1.14.0",
-        "openmdao>=3.10.0",
+        # Update the oldest package versions in the GitHub Actions build file, the readme,
+        # and the index.rst file in the docs when you change these
+        "numpy >=1.20, <2",
+        "scipy>=1.7.0",
+        "openmdao >=3.21",
     ],
     extras_require={
-        "testing": ["pytest", "pytest-cov", "coverage", "openaerostruct"],
-        "docs": ["sphinx_mdolab_theme", "openaerostruct"],
+        "testing": ["pytest", "pytest-cov", "coverage", "openaerostruct", "parameterized", "om-pycycle>=4.4.0"],
+        "docs": ["sphinx_mdolab_theme", "openaerostruct<=2.7.1"],
         "plot": ["matplotlib"],
     },
 )

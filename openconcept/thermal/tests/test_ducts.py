@@ -7,8 +7,8 @@ import warnings
 try:
     import pycycle
 
-    pyc_version = float(pycycle.__version__)
-    if pyc_version >= 3.0:
+    pyc_major_version = int(pycycle.__version__.split(".")[0])
+    if pyc_major_version >= 4:
         HAS_PYCYCLE = True
         import pycycle.api as pyc
 
@@ -84,7 +84,7 @@ try:
 
         def viewer(prob, pt):
             """
-            print a report of all the relevant cycle properties
+            Print a report of all the relevant cycle properties
             """
 
             fs_names = ["fc.Fl_O", "inlet.Fl_O", "duct.Fl_O", "nozz.Fl_O"]
@@ -114,10 +114,6 @@ try:
 
         class MPDuct(pyc.MPCycle):
             def setup(self):
-
-                self.options["thermo_method"] = "CEA"
-                self.options["thermo_data"] = pyc.species_data.janaf
-
                 self.pyc_add_pnt("design", PyCycleDuct(design=True, thermo_method="CEA"))
 
                 # define the off-design conditions we want to run
@@ -165,10 +161,21 @@ try:
                 oc_station = oc_stations[i]
                 if list_output:
                     print("--------" + pyc_station + "-------------")
-                if oc_station == "nozzle" or oc_station == "inlet":
-                    oc_states = ["T", "p", "rho", "M", "a", "Tt", "pt", "area"]
+                if oc_station == "inlet":
+                    oc_states = [
+                        "freestreamtotaltemperature.T",
+                        "freestreamtotalpressure.p",
+                        "rho",
+                        "M",
+                        "a",
+                        "Tt",
+                        "pt",
+                        "area",
+                    ]
+                elif oc_station == "nozzle":
+                    oc_states = ["T", "p", "rho", "M", "a", "Tt", "pt", "massflow.area"]
                 else:
-                    oc_states = ["T", "p", "rho", "M", "a", "Tt_out", "pt_out", "area"]
+                    oc_states = ["T", "p", "rho", "M", "a", "Tt_out", "pt_out", "totals.area"]
                 for j, pyc_state in enumerate(
                     ["stat:T", "stat:P", "stat:rho", "stat:MN", "stat:Vsonic", "tot:T", "tot:P", "stat:area"]
                 ):
@@ -293,7 +300,7 @@ def run_problem(
 
     prob.set_val("oc.sta3.heat_in", val=heat_in, units="kW")
     if oc_use_dpqp:
-        prob.set_val("oc.sta3.pressure_recovery", val=(1 - dPqP), units=None)
+        prob.set_val("oc.sta3.totals.pressure_recovery", val=(1 - dPqP), units=None)
     else:
         if HAS_PYCYCLE:
             delta_p = prob.get_val("pyduct.design.inlet.Fl_O:tot:P", units="Pa") - prob.get_val(
@@ -330,10 +337,21 @@ def check_params_match_known(prob, known_vals):
     oc_stations = ["inlet", "sta1", "sta3", "nozzle"]
     state_units = ["K", "Pa", "kg/m**3", None, "m/s", "K", "Pa", "inch**2"]
     for oc_station in oc_stations:
-        if oc_station == "nozzle" or oc_station == "inlet":
-            oc_states = ["T", "p", "rho", "M", "a", "Tt", "pt", "area"]
+        if oc_station == "inlet":
+            oc_states = [
+                "freestreamtotaltemperature.T",
+                "freestreamtotalpressure.p",
+                "rho",
+                "M",
+                "a",
+                "Tt",
+                "pt",
+                "area",
+            ]
+        elif oc_station == "nozzle":
+            oc_states = ["T", "p", "rho", "M", "a", "Tt", "pt", "massflow.area"]
         else:
-            oc_states = ["T", "p", "rho", "M", "a", "Tt_out", "pt_out", "area"]
+            oc_states = ["T", "p", "rho", "M", "a", "Tt_out", "pt_out", "totals.area"]
         for j, oc_state in enumerate(oc_states):
             if oc_station == "inlet" and oc_state in ["rho", "area"]:
                 continue
@@ -346,7 +364,9 @@ if not HAS_PYCYCLE:
     class TestOCDuct(unittest.TestCase):
         def __init__(self, *args, **kwargs):
             self.list_output = False
-            warnings.warn("pycycle >= 3.0 must be installed to run reg tests using pycycle. Using cached values")
+            warnings.warn(
+                "pycycle >= 3.0 must be installed to run reg tests using pycycle. Using cached values", stacklevel=2
+            )
             super(TestOCDuct, self).__init__(*args, **kwargs)
 
         def test_baseline(self):

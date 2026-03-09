@@ -25,18 +25,20 @@ try:
     from openaerostruct.integration.aerostruct_groups import AerostructPoint
     from openaerostruct.structures.spatial_beam_setup import SpatialBeamSetup
     from openaerostruct.structures.wingbox_group import WingboxGroup
-    from openconcept.aerodynamics.openaerostruct.drag_polar import PlanformMesh
-except ImportError:
-    raise ImportError("OpenAeroStruct must be installed to use the AerostructDragPolar component")
+    from openconcept.aerodynamics.openaerostruct.mesh_gen import TrapezoidalPlanformMesh
+except ImportError as err:
+    raise ImportError("OpenAeroStruct must be installed to use the AerostructDragPolar component") from err
 
 CITATION = """
-@InProceedings{Adler2022a,
-    author      = {Eytan J. Adler and Joaquim R. R. A. Martins},
-    title       = {Aerostructural wing design optimization considering full mission analysis},
-    booktitle   = {AIAA SciTech Forum},
-    doi         = {10.2514/6.2022-0382},
-    month       = {January},
-    year        = {2022}
+@article{Adler2022d,
+    author = {Adler, Eytan J. and Martins, Joaquim R. R. A.},
+    doi = {10.2514/1.c037096},
+    issn = {1533-3868},
+    journal = {Journal of Aircraft},
+    month = {December},
+    publisher = {American Institute of Aeronautics and Astronautics},
+    title = {Efficient Aerostructural Wing Optimization Considering Mission Analysis},
+    year = {2022}
 }
 """
 
@@ -117,9 +119,9 @@ class AerostructDragPolar(om.Group):
     num_nodes : int
         Number of analysis points per mission segment (scalar, dimensionless)
     num_x : int
-        Number of points in x (streamwise) direction (scalar, dimensionless)
+        Number of panels in x (streamwise) direction (scalar, dimensionless)
     num_y : int
-        Number of points in y (spanwise) direction for one wing because
+        Number of panels in y (spanwise) direction for one wing because
         uses symmetry (scalar, dimensionless)
     num_twist : int
         Number of spline control points for twist (scalar, dimensionless)
@@ -150,8 +152,8 @@ class AerostructDragPolar(om.Group):
 
     def initialize(self):
         self.options.declare("num_nodes", default=1, desc="Number of analysis points to run")
-        self.options.declare("num_x", default=3, desc="Number of streamwise mesh points")
-        self.options.declare("num_y", default=7, desc="Number of spanwise (half wing) mesh points")
+        self.options.declare("num_x", default=2, desc="Number of streamwise mesh panels")
+        self.options.declare("num_y", default=6, desc="Number of spanwise (half wing) mesh panels")
         self.options.declare("num_twist", default=4, desc="Number of twist spline control points")
         self.options.declare("num_toverc", default=4, desc="Number of thickness to chord ratio spline control points")
         self.options.declare("num_skin", default=4, desc="Number of skin thickness spline control points")
@@ -242,6 +244,7 @@ class AerostructDragPolar(om.Group):
                 q={"units": "Pa", "shape": (nn,)},
                 S={"units": "m**2"},
                 CD={"shape": (nn,)},
+                has_diag_partials=True,
             ),
             promotes_inputs=[("q", "fltcond|q"), ("S", "ac|geom|wing|S_ref")],
             promotes_outputs=["drag"],
@@ -305,9 +308,9 @@ class OASDataGen(om.ExplicitComponent):
     Options
     -------
     num_x : int
-        Number of points in x (streamwise) direction (scalar, dimensionless)
+        Number of panels in x (streamwise) direction (scalar, dimensionless)
     num_y : int
-        Number of points in y (spanwise) direction for one wing because
+        Number of panels in y (spanwise) direction for one wing because
         uses symmetry (scalar, dimensionless)
     num_twist : int
         Number of spline control points for twist (scalar, dimensionless)
@@ -339,8 +342,8 @@ class OASDataGen(om.ExplicitComponent):
         self.cite = CITATION
 
     def initialize(self):
-        self.options.declare("num_x", default=3, desc="Number of streamwise mesh points")
-        self.options.declare("num_y", default=7, desc="Number of spanwise (half wing) mesh points")
+        self.options.declare("num_x", default=2, desc="Number of streamwise mesh panels")
+        self.options.declare("num_y", default=6, desc="Number of spanwise (half wing) mesh panels")
         self.options.declare("num_twist", default=4, desc="Number of twist spline control points")
         self.options.declare("num_toverc", default=4, desc="Number of thickness to chord ratio spline control points")
         self.options.declare("num_skin", default=4, desc="Number of skin thickness spline control points")
@@ -556,9 +559,9 @@ inputs : dict
         List of spar thicknesses at control points of spline (vector, m)
         NOTE: length of vector is num_spar (set in options of OASDataGen)
     num_x: int
-        number of points in x (streamwise) direction (scalar, dimensionless)
+        number of panels in x (streamwise) direction (scalar, dimensionless)
     num_y: int
-        number of points in y (spanwise) direction for one wing because
+        number of panels in y (spanwise) direction for one wing because
         uses symmetry (scalar, dimensionless)
 surf_dict : dict
     Dictionary of OpenAeroStruct surface options; any options provided here
@@ -684,7 +687,7 @@ def compute_aerodynamic_data(point):
     compute_W_wing = point[4]
 
     # Set up OpenAeroStruct problem
-    p = om.Problem()
+    p = om.Problem(reports=False)
     p.model.add_subsystem(
         "aero_analysis",
         Aerostruct(
@@ -810,9 +813,9 @@ class Aerostruct(om.Group):
     Options
     -------
     num_x : int
-        Number of points in x (streamwise) direction (scalar, dimensionless)
+        Number of panels in x (streamwise) direction (scalar, dimensionless)
     num_y : int
-        Number of points in y (spanwise) direction for one wing because
+        Number of panels in y (spanwise) direction for one wing because
         uses symmetry (scalar, dimensionless)
     num_twist : int
         Number of spline control points for twist (scalar, dimensionless)
@@ -836,8 +839,8 @@ class Aerostruct(om.Group):
         self.cite = CITATION
 
     def initialize(self):
-        self.options.declare("num_x", default=3, desc="Number of streamwise mesh points")
-        self.options.declare("num_y", default=7, desc="Number of spanwise (half wing) mesh points")
+        self.options.declare("num_x", default=2, desc="Number of streamwise mesh panels")
+        self.options.declare("num_y", default=6, desc="Number of spanwise (half wing) mesh panels")
         self.options.declare("num_twist", default=4, desc="Number of twist spline control points")
         self.options.declare("num_toverc", default=4, desc="Number of thickness to chord ratio spline control points")
         self.options.declare("num_skin", default=4, desc="Number of skin thickness spline control points")
@@ -845,8 +848,10 @@ class Aerostruct(om.Group):
         self.options.declare("surf_options", default=None, desc="Dictionary of OpenAeroStruct surface options")
 
     def setup(self):
-        nx = int(self.options["num_x"])
-        ny = int(self.options["num_y"])
+        # Number of coordinates is one more than the number of panels
+        nx = int(self.options["num_x"]) + 1
+        ny = int(self.options["num_y"]) + 1
+
         n_twist = int(self.options["num_twist"])
         n_skin = int(self.options["num_skin"])
         n_spar = int(self.options["num_spar"])
@@ -1200,7 +1205,11 @@ class Aerostruct(om.Group):
         comp.add_spline(y_cp_name="t_over_c_cp", y_interp_name="t_over_c")
 
         # Wing mesh generator
-        wing_group.add_subsystem("mesh_gen", PlanformMesh(num_x=nx, num_y=ny), promotes_inputs=["*"])
+        wing_group.add_subsystem(
+            "mesh_gen",
+            TrapezoidalPlanformMesh(num_x=self.options["num_x"], num_y=self.options["num_y"]),
+            promotes_inputs=["*"],
+        )
 
         # Apply twist spline to mesh
         wing_group.add_subsystem(
@@ -1378,9 +1387,9 @@ class AerostructDragPolarExact(om.Group):
     num_nodes : int
         Number of analysis points per mission segment (scalar, dimensionless)
     num_x : int
-        Number of points in x (streamwise) direction (scalar, dimensionless)
+        Number of panels in x (streamwise) direction (scalar, dimensionless)
     num_y : int
-        Number of points in y (spanwise) direction for one wing because
+        Number of panels in y (spanwise) direction for one wing because
         uses symmetry (scalar, dimensionless)
     num_twist : int
         Number of spline control points for twist (scalar, dimensionless)
@@ -1405,8 +1414,8 @@ class AerostructDragPolarExact(om.Group):
 
     def initialize(self):
         self.options.declare("num_nodes", default=1, desc="Number of analysis points to run")
-        self.options.declare("num_x", default=3, desc="Number of streamwise mesh points")
-        self.options.declare("num_y", default=7, desc="Number of spanwise (half wing) mesh points")
+        self.options.declare("num_x", default=2, desc="Number of streamwise mesh panels")
+        self.options.declare("num_y", default=6, desc="Number of spanwise (half wing) mesh panels")
         self.options.declare("num_twist", default=4, desc="Number of twist spline control points")
         self.options.declare("num_toverc", default=4, desc="Number of thickness to chord ratio spline control points")
         self.options.declare("num_skin", default=4, desc="Number of skin thickness spline control points")
@@ -1487,6 +1496,7 @@ class AerostructDragPolarExact(om.Group):
                 S={"units": "m**2"},
                 CD={"shape": (nn,)},
                 CD0={"shape": (1,)},
+                has_diag_partials=True,
             ),
             promotes_inputs=[("q", "fltcond|q"), ("S", "ac|geom|wing|S_ref"), ("CD0", "ac|aero|CD_nonwing")],
             promotes_outputs=["drag"],
@@ -1500,8 +1510,8 @@ class AerostructDragPolarExact(om.Group):
 def example_usage():
     # Define parameters
     nn = 1
-    num_x = 3
-    num_y = 5
+    num_x = 2
+    num_y = 4
     S = 427.8  # m^2
     AR = 9.82
     taper = 0.149

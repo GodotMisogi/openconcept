@@ -43,7 +43,7 @@ class VectorConcatenateComp(ExplicitComponent):
             Default is 1 (i.e. a vector of scalars)
         val : float or list or tuple or ndarray
             The initial value of the variable being added in user-defined units. Default is 1.0.
-        **kwargs : str
+        kwargs : str
             Any other arguments to pass to the addition system
             (same as add_output method for ExplicitComponent)
             Examples include units (str or None), desc (str)
@@ -54,7 +54,7 @@ class VectorConcatenateComp(ExplicitComponent):
 
         if isinstance(output_name, str):
             if not isinstance(input_names, Iterable) or not isinstance(vec_sizes, Iterable):
-                raise ValueError("User must provide list of input name(s)" "and list of vec_sizes for each input")
+                raise ValueError("User must provide list of input name(s) and list of vec_sizes for each input")
 
             self._add_systems.append((output_name, input_names, vec_sizes, length, val, kwargs))
         elif isinstance(output_name, Iterable):
@@ -67,7 +67,7 @@ class VectorConcatenateComp(ExplicitComponent):
         elif output_name is None:
             pass
         else:
-            raise ValueError("First argument to init must be either of type " "'str' or 'None'")
+            raise ValueError("First argument to init must be either of type 'str' or 'None'")
 
     def add_relation(
         self,
@@ -142,7 +142,7 @@ class VectorConcatenateComp(ExplicitComponent):
         }
 
         if not isinstance(input_names, Iterable) or not isinstance(vec_sizes, Iterable):
-            raise ValueError("User must provide list of input name(s)" "and list of vec_sizes for each input")
+            raise ValueError("User must provide list of input name(s) and list of vec_sizes for each input")
 
         self._add_systems.append((output_name, input_names, vec_sizes, length, val, kwargs))
 
@@ -150,13 +150,13 @@ class VectorConcatenateComp(ExplicitComponent):
         """
         Use add_relation instead of add_output to define concatenate relations.
         """
-        raise NotImplementedError("Use add_relation method, not add_output method" "to create an concatenate relation")
+        raise NotImplementedError("Use add_relation method, not add_output method to create an concatenate relation")
 
     def setup(self):
         """
         Set up the component at run time from both add_relation and __init__.
         """
-        for (output_name, input_names, vec_sizes, length, val, kwargs) in self._add_systems:
+        for output_name, input_names, vec_sizes, length, val, kwargs in self._add_systems:
             if isinstance(input_names, str):
                 input_names = [input_names]
 
@@ -205,7 +205,7 @@ class VectorConcatenateComp(ExplicitComponent):
         outputs : Vector
             unscaled, dimensional output variables read via outputs[key]
         """
-        for (output_name, input_names, _, length, _, _) in self._add_systems:
+        for output_name, input_names, _, length, _, _ in self._add_systems:
             if isinstance(input_names, str):
                 input_names = [input_names]
 
@@ -262,7 +262,7 @@ class VectorSplitComp(ExplicitComponent):
             Default is 1 (i.e. a vector of scalars)
         val : float or list or tuple or ndarray
             The initial value of the variable being added in user-defined units. Default is 1.0.
-        **kwargs : str
+        kwargs : str
             Any other arguments to pass to the addition system
             (same as add_output method for ExplicitComponent)
             Examples include units (str or None), desc (str)
@@ -273,7 +273,7 @@ class VectorSplitComp(ExplicitComponent):
 
         if isinstance(input_name, str):
             if not isinstance(output_names, Iterable) or not isinstance(vec_sizes, Iterable):
-                raise ValueError("User must provide list of output name(s)" "and list of vec_sizes for each input")
+                raise ValueError("User must provide list of output name(s) and list of vec_sizes for each input")
 
             self._add_systems.append((output_names, input_name, vec_sizes, length, val, kwargs))
         elif isinstance(input_name, Iterable):
@@ -286,7 +286,7 @@ class VectorSplitComp(ExplicitComponent):
         elif input_name is None:
             pass
         else:
-            raise ValueError("input_name argument to init must be either of type " "'str' or 'None'")
+            raise ValueError("input_name argument to init must be either of type 'str' or 'None'")
 
     def add_relation(
         self,
@@ -361,7 +361,7 @@ class VectorSplitComp(ExplicitComponent):
         }
 
         if not isinstance(output_names, Iterable) or not isinstance(vec_sizes, Iterable):
-            raise ValueError("User must provide list of output name(s)" "and list of vec_sizes for each input")
+            raise ValueError("User must provide list of output name(s) and list of vec_sizes for each input")
 
         self._add_systems.append((output_names, input_name, vec_sizes, length, val, kwargs))
 
@@ -369,13 +369,13 @@ class VectorSplitComp(ExplicitComponent):
         """
         Use add_relation instead of add_output to define split relations.
         """
-        raise NotImplementedError("Use add_relation method, not add_output method" "to create a split relation")
+        raise NotImplementedError("Use add_relation method, not add_output method to create a split relation")
 
     def setup(self):
         """
         Set up the component at run time from both add_relation and __init__.
         """
-        for (output_names, input_name, vec_sizes, length, val, kwargs) in self._add_systems:
+        for output_names, input_name, vec_sizes, length, val, kwargs in self._add_systems:
             if isinstance(output_names, str):
                 output_names = [output_names]
 
@@ -423,7 +423,7 @@ class VectorSplitComp(ExplicitComponent):
         outputs : Vector
             unscaled, dimensional output variables read via outputs[key]
         """
-        for (output_names, input_name, vec_sizes, length, _, _) in self._add_systems:
+        for output_names, input_name, vec_sizes, length, _, _ in self._add_systems:
             if isinstance(output_names, str):
                 output_names = [output_names]
 

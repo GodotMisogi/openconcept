@@ -2,17 +2,19 @@
 This work was the basis of the following paper.
 Please cite it if you use this for your own publication!
 
-@InProceedings{Adler2022a,
-    author      = {Eytan J. Adler and Joaquim R. R. A. Martins},
-    title       = {Aerostructural wing design optimization considering full mission analysis},
-    booktitle   = {AIAA SciTech Forum},
-    doi         = {10.2514/6.2022-0382},
-    month       = {January},
-    year        = {2022}
+@article{Adler2022d,
+    author = {Adler, Eytan J. and Martins, Joaquim R. R. A.},
+    doi = {10.2514/1.c037096},
+    issn = {1533-3868},
+    journal = {Journal of Aircraft},
+    month = {December},
+    publisher = {American Institute of Aeronautics and Astronautics},
+    title = {Efficient Aerostructural Wing Optimization Considering Mission Analysis},
+    year = {2022}
 }
 
 Eytan Adler (Jan 2022)
-"""
+"""  # noqa
 
 import numpy as np
 
@@ -56,6 +58,7 @@ class B738AirplaneModel(IntegratorGroup):
                 "tags": ["integrate", "state_name:fuel_used", "state_units:kg", "state_val:1.0", "state_promotes:True"],
             },
             fuel_flow_in={"val": 1.0 * np.ones((nn,)), "units": "kg/s"},
+            has_diag_partials=True,
         )
 
         self.add_subsystem("doubler", doubler, promotes_outputs=["*"])
@@ -67,7 +70,7 @@ class B738AirplaneModel(IntegratorGroup):
         oas_surf_dict["t_over_c"] = acdata["ac"]["geom"]["wing"]["toverc"]["value"]
         self.add_subsystem(
             "drag",
-            VLMDragPolar(num_nodes=nn, num_x=3, num_y=7, num_twist=3, surf_options=oas_surf_dict),
+            VLMDragPolar(num_nodes=nn, num_x=2, num_y=6, num_twist=3, surf_options=oas_surf_dict),
             promotes_inputs=[
                 "fltcond|CL",
                 "fltcond|M",
@@ -151,8 +154,8 @@ def configure_problem():
     prob.model.nonlinear_solver = om.NewtonSolver(iprint=2, solve_subsystems=True)
     prob.model.linear_solver = om.DirectSolver()
     prob.model.nonlinear_solver.options["maxiter"] = 10
-    prob.model.nonlinear_solver.options["atol"] = 1e-6
-    prob.model.nonlinear_solver.options["rtol"] = 1e-6
+    prob.model.nonlinear_solver.options["atol"] = 1e-10
+    prob.model.nonlinear_solver.options["rtol"] = 1e-10
     prob.model.nonlinear_solver.options["err_on_non_converge"] = True
     prob.model.nonlinear_solver.linesearch = om.BoundsEnforceLS(bound_enforcement="scalar", print_bound_enforce=False)
 

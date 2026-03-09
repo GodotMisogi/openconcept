@@ -78,7 +78,7 @@ class ElementMultiplyDivideComp(ExplicitComponent):
         input_units : iterable of str
             Units for each of the input vectors in order.
             Output units will be dimensionally consistent.
-        **kwargs : str
+        kwargs : str
             Any other arguments to pass to the addition system
             (same as add_output method for ExplicitComponent)
             Examples include units (str or None), desc (str)
@@ -101,7 +101,7 @@ class ElementMultiplyDivideComp(ExplicitComponent):
         elif output_name is None:
             pass
         else:
-            raise ValueError("first argument to init must be either of type " "`str' or 'None'")
+            raise ValueError("first argument to init must be either of type `str' or 'None'")
 
     def add_equation(
         self,
@@ -198,7 +198,7 @@ class ElementMultiplyDivideComp(ExplicitComponent):
         Use add_equation instead of add_output to define equation systems.
         """
         raise NotImplementedError(
-            "Use add_equation method, not add_output method" "to create an multliplication/division relation"
+            "Use add_equation method, not add_output method to create an multliplication/division relation"
         )
 
     def setup(self):
